@@ -1,4 +1,5 @@
 venv
 build
+dist
 .idea
 Restore Google Photos Metadata.spec
