@@ -16,7 +16,7 @@ failure_details = []
 
 
 def signal_handler(sig, frame):
-    print("\nCtrl + C detected. Shutting down gracefully...")
+    tqdm.write("\nCtrl + C detected. Shutting down gracefully...")
     shutdown_event.set()
 
 
@@ -140,6 +140,7 @@ def find_json_file(image_path):
     # Remove Edit Suffix
     image_path = image_path.replace("-EFFECTS-edited", "")
     image_path = image_path.replace("-edited", "")
+    image_path = image_path.replace("-edi", "")
 
     base_name = os.path.basename(image_path)
     dir_name = os.path.dirname(image_path)
@@ -151,7 +152,9 @@ def find_json_file(image_path):
 
     patterns = [
         f"{base_name}.json",
+        f"{base_name[:-1]}.json",
         f"{base_name_no_ext}*.json",
+        f"{base_name_no_ext[:-1]}*.json",
         f"{clean_base_name}.supplemental-metadata*.json",
         f"{clean_base_name}{ext}.supplemental-metadata*.json",
         f"{clean_base_name}.supplemental-metadat*.json",
@@ -169,6 +172,18 @@ def find_json_file(image_path):
         )
         patterns.append(
             f"{clean_base_name}{ext}.supplemental-({number_suffix}).json"
+        )
+        patterns.append(
+            f"{clean_base_name[:-1]}{ext}.supplemental-metadata({number_suffix}).json"
+        )
+        patterns.append(
+            f"{clean_base_name[:-1]}{ext}.supplemental-metadat({number_suffix}).json"
+        )
+        patterns.append(
+            f"{clean_base_name[:-1]}{ext}.supplemental-({number_suffix}).json"
+        )
+        patterns.append(
+            f"{clean_base_name[:-1]}*.json"
         )
 
     for pattern in patterns:
@@ -190,7 +205,7 @@ def is_jpeg(file_path):
         )
         return "JPEG image data" in result.stdout
     except Exception as e:
-        print(f"Error checking file type: {e}")
+        tqdm.write(f"Error checking file type: {e}")
         return False
 
 
@@ -199,10 +214,10 @@ def check_and_rename(file_path):
         new_path = os.path.splitext(file_path)[0] + ".jpg"
         try:
             os.rename(file_path, new_path)
-            print(f"Renamed to: {new_path}")
+            tqdm.write(f"Renamed to: {new_path}")
             return new_path
         except Exception as e:
-            print(f"Failed to rename {file_path}: {e}")
+            tqdm.write(f"Failed to rename {file_path}: {e}")
             return None
     return file_path
 
@@ -260,14 +275,16 @@ def process_directory(directory):
                     ".webm",
                     ".3gp",
                     ".m4v",
+                    ".gif",
+                    ".mp"
                 )
             ):
                 image_files.append(os.path.join(root, file))
 
-    print(f"Found {len(image_files)} image files. Starting parallel processing...")
+    tqdm.write(f"Found {len(image_files)} image files. Starting parallel processing...")
 
     max_workers = min(32, os.cpu_count() or 1)
-    print(f"Using {max_workers} threads for processing.")
+    tqdm.write(f"Using {max_workers} threads for processing.")
 
     with tqdm(
         total=len(image_files),
@@ -288,23 +305,23 @@ def process_directory(directory):
 
             for future in as_completed(futures):
                 if shutdown_event.is_set():
-                    print("Shutdown signal received. Stopping remaining tasks...")
+                    tqdm.write("Shutdown signal received. Stopping remaining tasks...")
                     executor.shutdown(wait=False)
                     break
                 future.result()
 
-        print("All files processed.")
-        print(f"\nSummary: \nSuccess: {success_count}\nFailure: {failure_count}")
+        tqdm.write("All files processed.")
+        tqdm.write(f"\nSummary: \nSuccess: {success_count}\nFailure: {failure_count}")
         if failure_count > 0:
-            print("\nFailure Details:")
+            tqdm.write("\nFailure Details:")
             for path, reason in failure_details:
-                print(f"{path}: {reason}")
+                tqdm.write(f"{path}: {reason}")
 
         if failure_count == 0:
-            print("✅ All images processed successfully. Deleting JSON files...")
+            tqdm.write("✅ All images processed successfully. Deleting JSON files...")
             delete_json_files(directory)
         elif failure_count > 0:
-            print("\n❗ Some files failed. JSON files will not be deleted.")
+            tqdm.write("\n❗ Some files failed. JSON files will not be deleted.")
 
 
 if __name__ == "__main__":
@@ -313,4 +330,4 @@ if __name__ == "__main__":
     if os.path.isdir(directory):
         process_directory(directory)
     else:
-        print("Invalid directory. Please enter a valid path.")
+        tqdm.write("Invalid directory. Please enter a valid path.")
