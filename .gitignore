@@ -1,1 +1,4 @@
 venv
+dist
+.idea
+Restore Google Photos Metadata.spec
