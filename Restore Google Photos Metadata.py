@@ -5,6 +5,7 @@ from datetime import datetime
 import glob
 import signal
 import threading
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 
@@ -136,12 +137,13 @@ def apply_metadata(image_path, json_path, progress_bar):
 
 
 def find_json_file(image_path):
+    # Remove Edit Suffix
+    image_path = image_path.replace("-EFFECTS-edited", "")
+    image_path = image_path.replace("-edited", "")
+
     base_name = os.path.basename(image_path)
     dir_name = os.path.dirname(image_path)
     base_name_no_ext, ext = os.path.splitext(base_name)
-
-    # Extract any number inside parentheses if it exists
-    import re
 
     match = re.search(r"\((\d+)\)$", base_name_no_ext)
     number_suffix = match.group(1) if match else None
