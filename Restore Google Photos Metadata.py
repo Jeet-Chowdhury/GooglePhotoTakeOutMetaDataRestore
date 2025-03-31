@@ -168,6 +168,33 @@ def find_json_file(image_path):
     return None
 
 
+def is_jpeg(file_path):
+    try:
+        result = subprocess.run(
+            ["file", file_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        return "JPEG image data" in result.stdout
+    except Exception as e:
+        print(f"Error checking file type: {e}")
+        return False
+
+
+def check_and_rename(file_path):
+    if file_path.lower().endswith(".heic") and is_jpeg(file_path):
+        new_path = os.path.splitext(file_path)[0] + ".jpg"
+        try:
+            os.rename(file_path, new_path)
+            print(f"Renamed to: {new_path}")
+            return new_path
+        except Exception as e:
+            print(f"Failed to rename {file_path}: {e}")
+            return None
+    return file_path
+
+
 def process_file(image_path, progress_bar):
     if shutdown_event.is_set():
         return
@@ -239,10 +266,14 @@ def process_directory(directory):
         leave=True,
     ) as progress_bar:
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = [
-                executor.submit(process_file, image_path, progress_bar)
-                for image_path in image_files
-            ]
+            futures = []
+            for image_path in image_files:
+                image_path = check_and_rename(image_path)
+                if image_path:
+                    futures.append(
+                        executor.submit(process_file, image_path, progress_bar)
+                    )
+
             for future in as_completed(futures):
                 if shutdown_event.is_set():
                     print("Shutdown signal received. Stopping remaining tasks...")
