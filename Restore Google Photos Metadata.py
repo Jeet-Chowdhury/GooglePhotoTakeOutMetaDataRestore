@@ -87,7 +87,6 @@ def apply_metadata(image_path, json_path, progress_bar):
         creation_time = photo_taken_time = format_timestamp(
             data.get("photoTakenTime", {}).get("timestamp")
         )
-        # creation_time = format_timestamp(data.get('creationTime', {}).get('timestamp'))
         geo_data = data.get("geoData", {})
         people = [person.get("name", "")[:64] for person in data.get("people", [])]
 
@@ -126,10 +125,24 @@ def apply_metadata(image_path, json_path, progress_bar):
         if result.returncode == 0:
             success_count += 1
         else:
-            failure_count += 1
             error_message = result.stderr.decode().strip() or "Unknown Error"
-            failure_details.append((image_path, error_message))
-            tqdm.write(f"Error processing {image_path}: {error_message}")
+
+            if "Error reading OtherImageStart" in error_message:
+                tqdm.write(f"Attempting to repair corrupted metadata for {image_path}")
+                repair_command = [
+                    "exiftool",
+                    "-all=",
+                    "-overwrite_original",
+                    image_path,
+                ]
+                subprocess.run(repair_command)
+                tqdm.write(f"Metadata repaired for {image_path}. Retrying...")
+                subprocess.run(command)
+            else:
+                failure_count += 1
+                failure_details.append((image_path, error_message))
+                tqdm.write(f"Error processing {image_path}: {error_message}")
+
     except Exception as e:
         failure_count += 1
         failure_details.append((image_path, str(e)))
@@ -170,9 +183,7 @@ def find_json_file(image_path):
         patterns.append(
             f"{clean_base_name}{ext}.supplemental-metadat({number_suffix}).json"
         )
-        patterns.append(
-            f"{clean_base_name}{ext}.supplemental-({number_suffix}).json"
-        )
+        patterns.append(f"{clean_base_name}{ext}.supplemental-({number_suffix}).json")
         patterns.append(
             f"{clean_base_name[:-1]}{ext}.supplemental-metadata({number_suffix}).json"
         )
@@ -182,9 +193,7 @@ def find_json_file(image_path):
         patterns.append(
             f"{clean_base_name[:-1]}{ext}.supplemental-({number_suffix}).json"
         )
-        patterns.append(
-            f"{clean_base_name[:-1]}*.json"
-        )
+        patterns.append(f"{clean_base_name[:-1]}*.json")
 
     for pattern in patterns:
         json_files = glob.glob(os.path.join(dir_name, pattern))
@@ -276,7 +285,7 @@ def process_directory(directory):
                     ".3gp",
                     ".m4v",
                     ".gif",
-                    ".mp"
+                    ".mp",
                 )
             ):
                 image_files.append(os.path.join(root, file))
