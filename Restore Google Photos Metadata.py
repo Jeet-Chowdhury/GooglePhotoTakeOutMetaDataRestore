@@ -154,11 +154,21 @@ def find_json_file(image_path):
         f"{base_name_no_ext}*.json",
         f"{clean_base_name}.supplemental-metadata*.json",
         f"{clean_base_name}{ext}.supplemental-metadata*.json",
+        f"{clean_base_name}.supplemental-metadat*.json",
+        f"{clean_base_name}{ext}.supplemental-metadat*.json",
+        f"{clean_base_name}.supplemental-*.json",
+        f"{clean_base_name}{ext}.supplemental-*.json",
     ]
 
     if number_suffix:
         patterns.append(
             f"{clean_base_name}{ext}.supplemental-metadata({number_suffix}).json"
+        )
+        patterns.append(
+            f"{clean_base_name}{ext}.supplemental-metadat({number_suffix}).json"
+        )
+        patterns.append(
+            f"{clean_base_name}{ext}.supplemental-({number_suffix}).json"
         )
 
     for pattern in patterns:
