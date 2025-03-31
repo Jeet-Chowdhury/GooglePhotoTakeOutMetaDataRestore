@@ -55,8 +55,8 @@ def repair_corrupted_image(image_path):
         return False
 
 
-def delete_temp_files(directory):
-    for root, _, files in os.walk(directory):
+def delete_temp_files(directory_path):
+    for root, _, files in os.walk(directory_path):
         for file in files:
             if file.endswith("_exiftool_tmp"):
                 temp_path = os.path.join(root, file)
