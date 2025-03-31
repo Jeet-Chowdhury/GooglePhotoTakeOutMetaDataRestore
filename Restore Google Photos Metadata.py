@@ -27,6 +27,34 @@ def format_timestamp(timestamp):
         return None
 
 
+def repair_corrupted_image(image_path):
+    try:
+        temp_path = image_path + "_repaired.jpg"
+        command = [
+            "ffmpeg",
+            "-i",
+            image_path,
+            "-vf",
+            "scale=iw:ih",
+            "-c:v",
+            "libjpeg",
+            temp_path,
+        ]
+        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if result.returncode == 0:
+            os.replace(temp_path, image_path)
+            tqdm.write(f"Successfully repaired: {image_path}")
+            return True
+        else:
+            tqdm.write(
+                f"Repair failed for {image_path}: {result.stderr.decode().strip()}"
+            )
+            return False
+    except Exception as e:
+        tqdm.write(f"Error repairing {image_path}: {e}")
+        return False
+
+
 def delete_temp_files(directory):
     for root, _, files in os.walk(directory):
         for file in files:
@@ -138,6 +166,15 @@ def apply_metadata(image_path, json_path, progress_bar):
                 subprocess.run(repair_command)
                 tqdm.write(f"Metadata repaired for {image_path}. Retrying...")
                 subprocess.run(command)
+            elif "JPEG EOI marker not found" in error_message:
+                tqdm.write(
+                    f"Detected corrupted JPEG. Attempting repair using ffmpeg: {image_path}"
+                )
+                if repair_corrupted_image(image_path):
+                    tqdm.write(
+                        f"Retrying metadata application for repaired image: {image_path}"
+                    )
+                    subprocess.run(command)
             else:
                 failure_count += 1
                 failure_details.append((image_path, error_message))
