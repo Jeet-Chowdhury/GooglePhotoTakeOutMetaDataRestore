@@ -244,12 +244,12 @@ def find_json_file(image_path):
 def is_jpeg(file_path):
     try:
         result = subprocess.run(
-            ["file", file_path],
+            ["exiftool", "-mimetype", file_path],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
         )
-        return "JPEG image data" in result.stdout
+        return "image/jpeg" in result.stdout.lower()
     except Exception as e:
         tqdm.write(f"Error checking file type: {e}")
         return False
